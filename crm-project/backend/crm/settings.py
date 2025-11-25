@@ -62,25 +62,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'crm.wsgi.application'
 ASGI_APPLICATION = 'crm.asgi.application'
 
-DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'sqlite').lower()
-if DB_ENGINE == 'postgres':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'crm'),
-            'USER': os.environ.get('POSTGRES_USER', 'crm'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'crm'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'crm'),
+        'USER': os.environ.get('POSTGRES_USER', 'crm'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'crm'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / os.environ.get('SQLITE_DB_NAME', 'db.sqlite3'),
-        }
-    }
+}
 
 AUTH_USER_MODEL = 'accounts.User'
 
