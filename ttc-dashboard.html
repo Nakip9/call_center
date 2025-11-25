@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTC Dashboard - GOOD TEAM CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        
+        .particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .content-container {
+            position: relative;
+            z-index: 10;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .animate-in {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .sidebar-item {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .sidebar-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-right: 3px solid #3b82f6;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            backdrop-filter: blur(10px);
+        }
+        
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .form-input {
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .lead-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .lead-card:hover {
+            border-left-color: #3b82f6;
+            transform: translateX(4px);
+        }
+        
+        .lead-card.paid {
+            border-left-color: #10b981;
+        }
+        
+        .lead-card.pending {
+            border-left-color: #f59e0b;
+        }
+        
+        .status-badge {
+            animation: statusPulse 3s infinite;
+        }
+        
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Particle Background -->
+    <div class="particle-container"></div>
+    
+    <!-- Main Content -->
+    <div class="content-container">
+        <!-- Navigation -->
+        <nav class="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-4">
+                        <img src="resources/logo.png" alt="GOOD TEAM" class="h-8 w-8">
+                        <h1 class="text-xl font-bold text-gray-900">GOOD TEAM CRM</h1>
+                        <span class="text-sm text-gray-500">TTC Оператор</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <!-- Attendance Clock -->
+                        <div class="flex items-center space-x-2">
+                            <button id="clockInBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                Войти
+                            </button>
+                            <button id="clockOutBtn" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors hidden">
+                                Выйти
+                            </button>
+                            <span id="workTime" class="text-sm text-gray-600">00:00:00</span>
+                        </div>
+                        
+                        <!-- Notification Bell -->
+                        <button id="notificationBell" class="relative p-2 text-gray-600 hover:text-gray-900 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.5a6 6 0 0 1 6 6v1.5a6 6 0 0 0 2.5 4.5H6a6 6 0 0 0 2.5-4.5V9.5a6 6 0 0 1 6-6z"></path>
+                            </svg>
+                            <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center notification-badge" style="display: none;">0</span>
+                        </button>
+                        
+                        <!-- User Profile -->
+                        <div class="flex items-center space-x-3">
+                            <img id="currentUserAvatar" src="resources/user-avatars/avatar2.jpg" alt="User" class="h-8 w-8 rounded-full">
+                            <div>
+                                <p id="currentUserName" class="text-sm font-medium text-gray-900">Мария Иванова</p>
+                                <p id="currentUserRole" class="text-xs text-gray-500">TTC Оператор</p>
+                            </div>
+                            <button id="logoutBtn" class="text-gray-600 hover:text-gray-900 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-white/80 backdrop-blur-lg border-r border-gray-200 min-h-screen">
+                <div class="p-4">
+                    <nav class="space-y-2">
+                        <a href="#dashboard" class="sidebar-item active flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            </svg>
+                            <span>Обзор</span>
+                        </a>
+                        
+                        <a href="#add-lead" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Добавить лид</span>
+                        </a>
+                        
+                        <a href="#my-leads" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>Мои лиды</span>
+                        </a>
+                        
+                        <a href="#scripts" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>Скрипты</span>
+                        </a>
+                        
+                        <a href="#attendance" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Посещаемость</span>
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1 p-6">
+                <!-- Dashboard Overview -->
+                <div id="dashboard" class="section-content">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Обзор TTC оператора</h2>
+                        <p class="text-gray-600">Статистика и ключевые показатели</p>
+                    </div>
+
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <!-- Total Leads -->
+                        <div class="metric-card rounded-2xl p-6 card-hover animate-in">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Всего лидов</p>
+                                    <p id="totalMyLeads" class="text-3xl font-bold text-gray-900">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paid Leads -->
+                        <div class="metric-card rounded-2xl p-6 card-hover animate-in">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Оплачено</p>
+                                    <p id="paidLeads" class="text-3xl font-bold text-gray-900">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Payment -->
+                        <div class="metric-card rounded-2xl p-6 card-hover animate-in">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Ожидает оплаты</p>
+                                    <p id="pendingLeads" class="text-3xl font-bold text-gray-900">0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Revenue -->
+                        <div class="metric-card rounded-2xl p-6 card-hover animate-in">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Выручка</p>
+                                    <p id="myRevenue" class="text-3xl font-bold text-gray-900">₽0</p>
+                                </div>
+                                <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Быстрые действия</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="ttcDashboard.showSection('add-lead')" class="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span>Добавить лид</span>
+                            </button>
+                            
+                            <button onclick="ttcDashboard.showSection('my-leads')" class="flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span>Мои лиды</span>
+                            </button>
+                            
+                            <button onclick="ttcDashboard.showSection('scripts')" class="flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white py-3 px-4 rounded-lg transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span>Скрипты</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Моя активность</h3>
+                        <div id="recentActivity" class="space-y-4">
+                            <!-- Activity will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Lead Section -->
+                <div id="add-lead" class="section-content hidden">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Добавить новый лид</h2>
+                        <p class="text-gray-600">Заполните информацию о новом потенциальном клиенте</p>
+                    </div>
+
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-8 card-hover animate-in">
+                        <form id="addLeadForm" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Lead Name -->
+                                <div>
+                                    <label for="leadName" class="block text-sm font-medium text-gray-700 mb-2">Название компании/лида *</label>
+                                    <input type="text" id="leadName" name="leadName" required 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="Введите название компании">
+                                </div>
+
+                                <!-- Manager -->
+                                <div>
+                                    <label for="manager" class="block text-sm font-medium text-gray-700 mb-2">Менеджер *</label>
+                                    <input type="text" id="manager" name="manager" required 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="Ваше имя">
+                                </div>
+
+                                <!-- Phone Number -->
+                                <div>
+                                    <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-2">Номер телефона *</label>
+                                    <input type="tel" id="phoneNumber" name="phoneNumber" required 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="+7 (999) 123-45-67">
+                                </div>
+
+                                <!-- Chat ID -->
+                                <div>
+                                    <label for="chatId" class="block text-sm font-medium text-gray-700 mb-2">ID чата</label>
+                                    <input type="text" id="chatId" name="chatId" 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="@username или Telegram ID">
+                                </div>
+
+                                <!-- GEO -->
+                                <div>
+                                    <label for="geo" class="block text-sm font-medium text-gray-700 mb-2">ГЕО</label>
+                                    <input type="text" id="geo" name="geo" 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="Город, регион">
+                                </div>
+
+                                <!-- Stage -->
+                                <div>
+                                    <label for="stage" class="block text-sm font-medium text-gray-700 mb-2">Этап</label>
+                                    <select id="stage" name="stage" 
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="Новый">Новый</option>
+                                        <option value="Первичный контакт">Первичный контакт</option>
+                                        <option value="Переговоры">Переговоры</option>
+                                        <option value="Договор">Договор</option>
+                                        <option value="Завершен">Завершен</option>
+                                    </select>
+                                </div>
+
+                                <!-- Payment Amount -->
+                                <div>
+                                    <label for="paymentAmount" class="block text-sm font-medium text-gray-700 mb-2">Сумма сделки</label>
+                                    <input type="number" id="paymentAmount" name="paymentAmount" 
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="50000">
+                                </div>
+
+                                <!-- Call Source -->
+                                <div>
+                                    <label for="callSource" class="block text-sm font-medium text-gray-700 mb-2">Источник звонка</label>
+                                    <select id="callSource" name="callSource" 
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="Сайт">Сайт</option>
+                                        <option value="Реклама">Реклама</option>
+                                        <option value="Реферал">Реферал</option>
+                                        <option value="Социальные сети">Социальные сети</option>
+                                        <option value="Холодный звонок">Холодный звонок</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Individual Request -->
+                            <div>
+                                <label for="individualRequest" class="block text-sm font-medium text-gray-700 mb-2">Индивидуальный запрос</label>
+                                <textarea id="individualRequest" name="individualRequest" rows="3" 
+                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg form-input focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          placeholder="Опишите индивидуальные потребности клиента..."></textarea>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="flex justify-end space-x-4 pt-4">
+                                <button type="button" onclick="ttcDashboard.showSection('dashboard')" 
+                                        class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                    Отмена
+                                </button>
+                                <button type="submit" 
+                                        class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                                    Добавить лид
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- My Leads Section -->
+                <div id="my-leads" class="section-content hidden">
+                    <div class="mb-8">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2">Мои лиды</h2>
+                                <p class="text-gray-600">Управление созданными вами лидами</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <input type="text" id="leadsSearch" placeholder="Поиск лидов..." 
+                                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <select id="leadsFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="all">Все статусы</option>
+                                    <option value="new">Новые</option>
+                                    <option value="in_progress">В работе</option>
+                                    <option value="done">Завершены</option>
+                                    <option value="paid">Оплачены</option>
+                                    <option value="pending">Ожидают оплаты</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="myLeadsList" class="space-y-4">
+                        <!-- Leads will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Scripts Section -->
+                <div id="scripts" class="section-content hidden">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Скрипты</h2>
+                        <p class="text-gray-600">Справочные материалы для работы с клиентами</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Scripts Sidebar -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Категории</h3>
+                                <div class="space-y-2">
+                                    <button onclick="filterScripts('all')" class="w-full text-left px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium">
+                                        Все скрипты
+                                    </button>
+                                    <button onclick="filterScripts('Знакомство')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+                                        Знакомство
+                                    </button>
+                                    <button onclick="filterScripts('Возражения')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+                                        Возражения
+                                    </button>
+                                    <button onclick="filterScripts('Закрытие')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+                                        Закрытие
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scripts Content -->
+                        <div class="lg:col-span-2">
+                            <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">Скрипты</h3>
+                                    <input type="text" id="scriptsSearch" placeholder="Поиск скриптов..." 
+                                           class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                                <div id="scriptsList" class="space-y-4">
+                                    <!-- Scripts will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance Section -->
+                <div id="attendance" class="section-content hidden">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Посещаемость</h2>
+                        <p class="text-gray-600">История вашей рабочей активности</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Current Status -->
+                        <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Текущий статус</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Статус</p>
+                                        <p id="currentStatus" class="text-lg font-semibold text-gray-600">Не на работе</p>
+                                    </div>
+                                    <div class="w-4 h-4 bg-red-400 rounded-full status-badge"></div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Время работы сегодня</p>
+                                        <p id="todayWorkTime" class="text-lg font-semibold text-gray-600">00:00:00</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- This Week Stats -->
+                        <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Статистика за неделю</h3>
+                            <div id="weeklyChart" style="height: 200px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance History -->
+                    <div class="bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in mt-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">История посещений</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Вход</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Выход</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Время работы</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceHistory" class="bg-white divide-y divide-gray-200">
+                                    <!-- Attendance history will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals will be added here -->
+    <div id="modalContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="main.js"></script>
+    
+    <script>
+        // TTC Dashboard specific functionality
+        class TTCDashboard {
+            constructor() {
+                this.currentSection = 'dashboard';
+                this.attendanceStartTime = null;
+                this.workTimer = null;
+                this.init();
+            }
+
+            init() {
+                this.setupNavigation();
+                this.loadDashboard();
+                this.loadMyLeads();
+                this.loadScripts();
+                this.setupAttendance();
+                this.setupLeadForm();
+                this.setupFilters();
+            }
+
+            setupNavigation() {
+                const sidebarItems = document.querySelectorAll('.sidebar-item');
+                sidebarItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const section = item.getAttribute('href').substring(1);
+                        this.showSection(section);
+                    });
+                });
+            }
+
+            showSection(sectionName) {
+                // Hide all sections
+                document.querySelectorAll('.section-content').forEach(section => {
+                    section.classList.add('hidden');
+                });
+
+                // Show selected section
+                const targetSection = document.getElementById(sectionName);
+                if (targetSection) {
+                    targetSection.classList.remove('hidden');
+                    this.currentSection = sectionName;
+                }
+
+                // Update active sidebar item
+                document.querySelectorAll('.sidebar-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                const activeItem = document.querySelector(`[href="#${sectionName}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                }
+            }
+
+            loadDashboard() {
+                if (!window.crm || !window.crm.currentUser) return;
+                
+                const myLeads = window.crm.leads.filter(lead => lead.createdBy === window.crm.currentUser.id);
+                const paidLeads = myLeads.filter(lead => lead.paymentStatus === 'paid');
+                const pendingLeads = myLeads.filter(lead => lead.paymentStatus === 'pending');
+                
+                document.getElementById('totalMyLeads').textContent = myLeads.length;
+                document.getElementById('paidLeads').textContent = paidLeads.length;
+                document.getElementById('pendingLeads').textContent = pendingLeads.length;
+                
+                const revenue = paidLeads.reduce((sum, lead) => sum + (lead.paymentAmount || 0), 0);
+                document.getElementById('myRevenue').textContent = formatCurrency(revenue);
+                
+                this.loadRecentActivity();
+            }
+
+            loadRecentActivity() {
+                const container = document.getElementById('recentActivity');
+                const myLeads = window.crm.leads.filter(lead => lead.createdBy === window.crm.currentUser.id);
+                const recentLeads = myLeads.slice(-3);
+                
+                container.innerHTML = recentLeads.map(lead => `
+                    <div class="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">${lead.leadName}</p>
+                            <p class="text-xs text-gray-500">${lead.phoneNumber} • ${formatCurrency(lead.paymentAmount || 0)}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                lead.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${lead.paymentStatus === 'paid' ? 'Оплачено' : 'Ожидает'}
+                            </span>
+                            <span class="text-xs text-gray-400">${formatDate(lead.timestamp)}</span>
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-gray-500 text-center py-8">Нет недавней активности</p>';
+            }
+
+            setupLeadForm() {
+                const form = document.getElementById('addLeadForm');
+                if (!form) return;
+                
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(e.target);
+                    const leadData = {
+                        manager: formData.get('manager'),
+                        leadName: formData.get('leadName'),
+                        phoneNumber: formData.get('phoneNumber'),
+                        chatId: formData.get('chatId'),
+                        geo: formData.get('geo'),
+                        stage: formData.get('stage'),
+                        individualRequest: formData.get('individualRequest'),
+                        callSource: formData.get('callSource'),
+                        paymentAmount: parseInt(formData.get('paymentAmount')) || 0
+                    };
+                    
+                    if (window.crm) {
+                        window.crm.addLead(leadData);
+                        e.target.reset();
+                        this.showSection('my-leads');
+                        this.loadMyLeads();
+                    }
+                });
+            }
+
+            loadMyLeads() {
+                if (!window.crm || !window.crm.currentUser) return;
+                
+                const myLeads = window.crm.leads.filter(lead => lead.createdBy === window.crm.currentUser.id);
+                const container = document.getElementById('myLeadsList');
+                
+                if (myLeads.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12">
+                            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">У вас пока нет лидов</h3>
+                            <p class="text-gray-500 mb-4">Начните создавать лиды прямо сейчас</p>
+                            <button onclick="ttcDashboard.showSection('add-lead')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                Добавить первый лид
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = myLeads.map(lead => `
+                    <div class="lead-card ${lead.paymentStatus} bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">${lead.leadName}</h3>
+                                <p class="text-sm text-gray-600">${lead.phoneNumber}</p>
+                                ${lead.chatId ? `<p class="text-sm text-gray-500">${lead.chatId}</p>` : ''}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    lead.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${lead.paymentStatus === 'paid' ? 'Оплачено' : 'Ожидает оплаты'}
+                                </span>
+                                <button onclick="ttcDashboard.editLead(${lead.id})" class="text-blue-600 hover:text-blue-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Сумма сделки</p>
+                                <p class="text-lg font-semibold text-gray-900">${formatCurrency(lead.paymentAmount || 0)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Статус</p>
+                                <p class="text-sm font-medium text-gray-900">${lead.stage}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Источник</p>
+                                <p class="text-sm font-medium text-gray-900">${lead.callSource}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Дата создания</p>
+                                <p class="text-sm font-medium text-gray-900">${formatDate(lead.timestamp)}</p>
+                            </div>
+                        </div>
+                        
+                        ${lead.individualRequest ? `
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-500 mb-1">Индивидуальный запрос</p>
+                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">${lead.individualRequest}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="flex space-x-2">
+                                ${lead.paymentStatus === 'pending' ? `
+                                    <button onclick="ttcDashboard.markAsPaid(${lead.id})" 
+                                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                        Отметить оплаченным
+                                    </button>
+                                ` : ''}
+                                <button onclick="ttcDashboard.viewLeadDetails(${lead.id})" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                    Подробности
+                                </button>
+                            </div>
+                            
+                            <!-- Call Status -->
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-gray-500">Обработка:</span>
+                                ${this.getCallStatus(lead)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getCallStatus(lead) {
+                const callAttempts = window.crm?.callAttempts.filter(attempt => attempt.leadId === lead.id) || [];
+                
+                if (callAttempts.length === 0) {
+                    // Check if lead is assigned to call center operator
+                    const assignedToCallCenter = window.crm.users.some(user => 
+                        user.role === 'callcenter' && user.id === lead.assignedTo
+                    );
+                    
+                    if (assignedToCallCenter) {
+                        return '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Назначен оператору</span>';
+                    }
+                    
+                    return '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Ожидает обработки</span>';
+                }
+                
+                const lastAttempt = callAttempts[callAttempts.length - 1];
+                const statusColors = {
+                    'done': 'bg-green-100 text-green-800',
+                    'busy': 'bg-yellow-100 text-yellow-800',
+                    'no_answer': 'bg-red-100 text-red-800'
+                };
+                
+                const statusText = {
+                    'done': 'Обработан',
+                    'busy': 'Занято',
+                    'no_answer': 'Нет ответа'
+                };
+                
+                return `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColors[lastAttempt.callResult] || 'bg-gray-100 text-gray-800'}">
+                    ${statusText[lastAttempt.callResult] || 'Неизвестно'} (${callAttempts.length})
+                </span>`;
+            }
+
+            setupFilters() {
+                const searchInput = document.getElementById('leadsSearch');
+                const filterSelect = document.getElementById('leadsFilter');
+                
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => this.filterLeads());
+                }
+                
+                if (filterSelect) {
+                    filterSelect.addEventListener('change', () => this.filterLeads());
+                }
+            }
+
+            filterLeads() {
+                const searchTerm = document.getElementById('leadsSearch')?.value.toLowerCase() || '';
+                const filterValue = document.getElementById('leadsFilter')?.value || 'all';
+                
+                if (!window.crm || !window.crm.currentUser) return;
+                
+                let myLeads = window.crm.leads.filter(lead => lead.createdBy === window.crm.currentUser.id);
+                
+                // Filter by search term
+                if (searchTerm) {
+                    myLeads = myLeads.filter(lead => 
+                        lead.leadName.toLowerCase().includes(searchTerm) ||
+                        lead.phoneNumber.includes(searchTerm)
+                    );
+                }
+                
+                // Filter by status
+                if (filterValue !== 'all') {
+                    if (filterValue === 'paid' || filterValue === 'pending') {
+                        myLeads = myLeads.filter(lead => lead.paymentStatus === filterValue);
+                    } else {
+                        myLeads = myLeads.filter(lead => lead.status === filterValue);
+                    }
+                }
+                
+                // Re-render filtered leads
+                this.renderFilteredLeads(myLeads);
+            }
+
+            renderFilteredLeads(leads) {
+                const container = document.getElementById('myLeadsList');
+                
+                if (leads.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12">
+                            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Лиды не найдены</h3>
+                            <p class="text-gray-500">Попробуйте изменить параметры поиска</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Reuse the same HTML structure as loadMyLeads
+                container.innerHTML = leads.map(lead => `
+                    <div class="lead-card ${lead.paymentStatus} bg-white/80 backdrop-blur-lg rounded-2xl p-6 card-hover animate-in">
+                        <!-- Same HTML structure as in loadMyLeads method -->
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">${lead.leadName}</h3>
+                                <p class="text-sm text-gray-600">${lead.phoneNumber}</p>
+                                ${lead.chatId ? `<p class="text-sm text-gray-500">${lead.chatId}</p>` : ''}
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    lead.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${lead.paymentStatus === 'paid' ? 'Оплачено' : 'Ожидает оплаты'}
+                                </span>
+                                <button onclick="ttcDashboard.editLead(${lead.id})" class="text-blue-600 hover:text-blue-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Сумма сделки</p>
+                                <p class="text-lg font-semibold text-gray-900">${formatCurrency(lead.paymentAmount || 0)}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Статус</p>
+                                <p class="text-sm font-medium text-gray-900">${lead.stage}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Источник</p>
+                                <p class="text-sm font-medium text-gray-900">${lead.callSource}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Дата создания</p>
+                                <p class="text-sm font-medium text-gray-900">${formatDate(lead.timestamp)}</p>
+                            </div>
+                        </div>
+                        
+                        ${lead.individualRequest ? `
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-500 mb-1">Индивидуальный запрос</p>
+                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">${lead.individualRequest}</p>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="flex space-x-2">
+                                ${lead.paymentStatus === 'pending' ? `
+                                    <button onclick="ttcDashboard.markAsPaid(${lead.id})" 
+                                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                        Отметить оплаченным
+                                    </button>
+                                ` : ''}
+                                <button onclick="ttcDashboard.viewLeadDetails(${lead.id})" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                    Подробности
+                                </button>
+                            </div>
+                            
+                            <!-- Call Status -->
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-gray-500">Обработка:</span>
+                                ${this.getCallStatus(lead)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            loadScripts() {
+                const scripts = window.crm?.scripts || [];
+                const container = document.getElementById('scriptsList');
+                
+                container.innerHTML = scripts.map(script => `
+                    <div class="script-item border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow" data-category="${script.category}">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="text-lg font-medium text-gray-900">${script.scriptName}</h4>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                ${script.category}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-700 leading-relaxed">${script.scriptContent}</p>
+                        <div class="mt-3 text-xs text-gray-500">
+                            Обновлено: ${formatDate(script.updatedAt)}
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-gray-500 text-center py-8">Скрипты не найдены</p>';
+            }
+
+            filterScripts(category) {
+                const scriptItems = document.querySelectorAll('.script-item');
+                
+                scriptItems.forEach(item => {
+                    if (category === 'all' || item.dataset.category === category) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                // Update active category button
+                document.querySelectorAll('[onclick^="filterScripts"]').forEach(btn => {
+                    btn.className = 'w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm';
+                });
+                
+                event.target.className = 'w-full text-left px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium';
+            }
+
+            setupAttendance() {
+                const clockInBtn = document.getElementById('clockInBtn');
+                const clockOutBtn = document.getElementById('clockOutBtn');
+                
+                clockInBtn?.addEventListener('click', () => this.clockIn());
+                clockOutBtn?.addEventListener('click', () => this.clockOut());
+                
+                this.updateAttendanceUI();
+            }
+
+            clockIn() {
+                this.attendanceStartTime = new Date();
+                localStorage.setItem('ttc_attendance_start', this.attendanceStartTime.toISOString());
+                
+                this.updateAttendanceUI();
+                this.startWorkTimer();
+                
+                if (window.crm) {
+                    window.crm.showNotification('Вы начали рабочий день', 'success');
+                }
+            }
+
+            clockOut() {
+                if (!this.attendanceStartTime) return;
+                
+                const endTime = new Date();
+                const workDuration = endTime - this.attendanceStartTime;
+                
+                // Save attendance record
+                const record = {
+                    date: new Date().toISOString().split('T')[0],
+                    checkIn: this.attendanceStartTime.toLocaleTimeString('ru-RU'),
+                    checkOut: endTime.toLocaleTimeString('ru-RU'),
+                    duration: Math.floor(workDuration / 1000 / 60) // minutes
+                };
+                
+                let attendanceHistory = JSON.parse(localStorage.getItem('ttc_attendance_history') || '[]');
+                attendanceHistory.unshift(record);
+                localStorage.setItem('ttc_attendance_history', JSON.stringify(attendanceHistory));
+                
+                // Reset
+                this.attendanceStartTime = null;
+                localStorage.removeItem('ttc_attendance_start');
+                
+                this.updateAttendanceUI();
+                this.stopWorkTimer();
+                this.loadAttendanceHistory();
+                
+                if (window.crm) {
+                    window.crm.showNotification('Вы завершили рабочий день', 'success');
+                }
+            }
+
+            updateAttendanceUI() {
+                const clockInBtn = document.getElementById('clockInBtn');
+                const clockOutBtn = document.getElementById('clockOutBtn');
+                const currentStatus = document.getElementById('currentStatus');
+                const statusIndicator = currentStatus?.previousElementSibling?.querySelector('div');
+                
+                if (this.attendanceStartTime) {
+                    clockInBtn?.classList.add('hidden');
+                    clockOutBtn?.classList.remove('hidden');
+                    if (currentStatus) currentStatus.textContent = 'На работе';
+                    if (statusIndicator) {
+                        statusIndicator.className = 'w-4 h-4 bg-green-400 rounded-full status-badge';
+                    }
+                } else {
+                    clockInBtn?.classList.remove('hidden');
+                    clockOutBtn?.classList.add('hidden');
+                    if (currentStatus) currentStatus.textContent = 'Не на работе';
+                    if (statusIndicator) {
+                        statusIndicator.className = 'w-4 h-4 bg-red-400 rounded-full status-badge';
+                    }
+                }
+            }
+
+            startWorkTimer() {
+                this.workTimer = setInterval(() => {
+                    if (!this.attendanceStartTime) return;
+                    
+                    const now = new Date();
+                    const elapsed = now - this.attendanceStartTime;
+                    const hours = Math.floor(elapsed / 1000 / 60 / 60);
+                    const minutes = Math.floor((elapsed / 1000 / 60) % 60);
+                    const seconds = Math.floor((elapsed / 1000) % 60);
+                    
+                    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    const workTimeElement = document.getElementById('workTime');
+                    const todayWorkTimeElement = document.getElementById('todayWorkTime');
+                    
+                    if (workTimeElement) workTimeElement.textContent = timeString;
+                    if (todayWorkTimeElement) todayWorkTimeElement.textContent = timeString;
+                }, 1000);
+            }
+
+            stopWorkTimer() {
+                if (this.workTimer) {
+                    clearInterval(this.workTimer);
+                    this.workTimer = null;
+                }
+                
+                const workTimeElement = document.getElementById('workTime');
+                if (workTimeElement) workTimeElement.textContent = '00:00:00';
+            }
+
+            loadAttendanceHistory() {
+                const attendanceHistory = JSON.parse(localStorage.getItem('ttc_attendance_history') || '[]');
+                const tbody = document.getElementById('attendanceHistory');
+                
+                if (!tbody) return;
+                
+                tbody.innerHTML = attendanceHistory.slice(0, 10).map(record => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(record.date)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.checkIn}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.checkOut || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${record.duration || 0} мин</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                record.checkOut ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${record.checkOut ? 'Завершен' : 'В процессе'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Нет данных о посещаемости</td></tr>';
+            }
+
+            markAsPaid(leadId) {
+                if (window.crm) {
+                    window.crm.updateLead(leadId, { paymentStatus: 'paid' });
+                    this.loadMyLeads();
+                    this.loadDashboard();
+                    window.crm.showNotification('Лид отмечен как оплаченный', 'success');
+                }
+            }
+
+            editLead(leadId) {
+                window.crm?.showNotification('Функция редактирования в разработке', 'info');
+            }
+
+            viewLeadDetails(leadId) {
+                const lead = window.crm?.leads.find(l => l.id === leadId);
+                const callAttempts = window.crm?.callAttempts.filter(attempt => attempt.leadId === leadId) || [];
+                
+                if (!lead) return;
+                
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-2xl font-bold">${lead.leadName}</h3>
+                            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Телефон</p>
+                                    <p class="font-medium">${lead.phoneNumber}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Сумма</p>
+                                    <p class="font-medium">${formatCurrency(lead.paymentAmount || 0)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Статус</p>
+                                    <p class="font-medium">${lead.stage}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Оплата</p>
+                                    <p class="font-medium">${lead.paymentStatus === 'paid' ? 'Оплачено' : 'Ожидает'}</p>
+                                </div>
+                            </div>
+                            
+                            ${lead.individualRequest ? `
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-2">Индивидуальный запрос</p>
+                                    <p class="bg-gray-50 p-3 rounded-lg">${lead.individualRequest}</p>
+                                </div>
+                            ` : ''}
+                            
+                            <div>
+                                <h4 class="font-semibold mb-2">История звонков (${callAttempts.length})</h4>
+                                ${callAttempts.length > 0 ? `
+                                    <div class="space-y-2">
+                                        ${callAttempts.map(attempt => `
+                                            <div class="bg-gray-50 p-3 rounded-lg">
+                                                <div class="flex justify-between items-center">
+                                                    <span class="text-sm font-medium">Попытка #${attempt.attemptNumber}</span>
+                                                    <span class="text-xs text-gray-500">${attempt.timestamp}</span>
+                                                </div>
+                                                <p class="text-sm mt-1">Результат: ${attempt.callResult}</p>
+                                                ${attempt.notes ? `<p class="text-sm text-gray-600 mt-1">${attempt.notes}</p>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : '<p class="text-sm text-gray-500">Звонков пока не было</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+            }
+        }
+
+        // Initialize TTC dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.crm && window.crm.currentUser && window.crm.currentUser.role === 'ttc') {
+                window.ttcDashboard = new TTCDashboard();
+                
+                // Load saved attendance state
+                const savedStartTime = localStorage.getItem('ttc_attendance_start');
+                if (savedStartTime) {
+                    window.ttcDashboard.attendanceStartTime = new Date(savedStartTime);
+                    window.ttcDashboard.updateAttendanceUI();
+                    window.ttcDashboard.startWorkTimer();
+                }
+                
+                // Load attendance history
+                window.ttcDashboard.loadAttendanceHistory();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
